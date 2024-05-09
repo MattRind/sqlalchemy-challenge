@@ -55,9 +55,8 @@ def welcome():
 @app.route("/api/v1.0/precipitation")
 def precipitation():
 
-    """Return a list of passenger data including the name, age, and sex of each passenger"""
+    """Dictionary of the query results from your precipitation analysis (last 12 months)"""
     all_data = session.query(Measurements)
-    # all_data_clean = session.query(Measurements).filter(Measurements.prcp != "")
     date_one_year_prior = '2016-08-23'  #this date determined in climate_starter.ipynb
     last_12_mo_data = all_data.filter(Measurements.date >= date_one_year_prior)
     dates_list = []
@@ -65,12 +64,15 @@ def precipitation():
     for row in last_12_mo_data: 
         dates_list.append(row.date) 
         precipitation_list.append(row.prcp)
+    # direction specify that 
     dictionary = dict(zip(dates_list, precipitation_list))
-
+    session.close()
     return jsonify(dictionary)
 
 @app.route("/api/v1.0/stations")
 def stations():
+
+    """JSON list of stations from the dataset"""
     results = session.query(Stations.name, Stations.station).all()
     all_stations = []
     for name, station in results:
@@ -78,10 +80,13 @@ def stations():
         station_dict["station name"] = name
         station_dict["station designation"] = station
         all_stations.append(station_dict)
+    session.close()
     return jsonify(all_stations)
 
 @app.route("/api/v1.0/tobs")
 def tobs():
+
+    """Query of dates & tobs of the most-active station for the previous year of data"""
     USC00519281_only = session.query(Measurements).filter_by(station = 'USC00519281')
     date_one_year_prior = '2016-08-18'  #this date determined in climate_starter.ipynb
     USC00519281_only_last_yr = USC00519281_only.filter(Measurements.date >= date_one_year_prior)
@@ -91,29 +96,27 @@ def tobs():
         dates_list.append(row.date) 
         tobs_list.append(row.tobs)
     tobs_dict = dict(zip(dates_list, tobs_list))
+    session.close()
     return jsonify(tobs_dict)
-
-@app.route("/api/v2.0/<tart>")
-def blah(tart):
-    x = tart*10
-    return (
-        f"date is of {x} data and this is the date {tart}"
-    )
 
 @app.route("/api/v1.0/<start>")
 def date_to_end(start):
+
+    """min tobs, max tobs and average tobs of specified date to most recent date"""
     sel = [ 
        func.min(Measurements.tobs), 
        func.max(Measurements.tobs), 
        func.avg(Measurements.tobs)
        ]
     tobs_data_user_start_date = session.query(*sel).\
-    filter(Measurements.date > start).\
-    first()
+    filter(Measurements.date > start).first()
+    session.close()
     return list(tobs_data_user_start_date)
 
 @app.route("/api/v1.0/<start>/<end>")
 def start_to_end(start, end):
+
+    """min tobs, max tobs and average tobs of specified date range"""
     sel = [ 
        func.min(Measurements.tobs), 
        func.max(Measurements.tobs), 
@@ -122,9 +125,9 @@ def start_to_end(start, end):
     tobs_data_user_date_range = session.query(*sel).\
     filter(Measurements.date > start, Measurements.date < end).\
     first()
+    session.close()
     return list(tobs_data_user_date_range)
 
 if __name__ == '__main__':
     app.run(debug=True)
 
-    # f and /api/v1.0/<start>/<end>
